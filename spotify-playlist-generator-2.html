@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AI Playlist Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green: #1DB954;
+    --green-dim: #17a349;
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --surface2: #1a1a1a;
+    --border: #242424;
+    --text: #f0f0f0;
+    --muted: #666;
+    --danger: #ff4d4d;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse 60% 50% at 50% -10%, rgba(29,185,84,0.12) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 560px;
+  }
+
+  /* HEADER */
+  .header {
+    text-align: center;
+    margin-bottom: 40px;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .logo-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--green);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(28px, 6vw, 42px);
+    font-weight: 800;
+    letter-spacing: -1.5px;
+    line-height: 1;
+  }
+
+  h1 span { color: var(--green); }
+
+  .subtitle {
+    margin-top: 10px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 300;
+    letter-spacing: 0.3px;
+  }
+
+  /* CARD */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px;
+    animation: fadeUp 0.6s 0.1s ease both;
+  }
+
+  /* AUTH SECTION */
+  #auth-section { text-align: center; }
+
+  .auth-desc {
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 24px;
+    line-height: 1.6;
+  }
+
+  .btn-spotify {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--green);
+    color: #000;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    border: none;
+    border-radius: 100px;
+    padding: 14px 28px;
+    cursor: pointer;
+    transition: transform 0.15s, background 0.15s;
+    letter-spacing: 0.2px;
+  }
+
+  .btn-spotify:hover { background: #1ed760; transform: scale(1.03); }
+  .btn-spotify:active { transform: scale(0.98); }
+
+  /* GENERATOR SECTION */
+  #generator-section { display: none; }
+
+  .user-badge {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 8px 14px 8px 8px;
+    margin-bottom: 28px;
+    width: fit-content;
+  }
+
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: #000;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+  .user-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .connected-dot {
+    width: 7px;
+    height: 7px;
+    background: var(--green);
+    border-radius: 50%;
+    margin-left: auto;
+    animation: pulse 2s infinite;
+  }
+
+  label {
+    display: block;
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 300;
+    padding: 14px 16px;
+    resize: none;
+    height: 100px;
+    transition: border-color 0.2s;
+    outline: none;
+    margin-bottom: 16px;
+  }
+
+  textarea::placeholder { color: #444; }
+  textarea:focus { border-color: var(--green); }
+
+  .options-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .option-group { display: flex; flex-direction: column; gap: 8px; }
+
+  select, input[type="text"] {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 10px 12px;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+
+  select:focus, input[type="text"]:focus { border-color: var(--green); }
+  select option { background: #1a1a1a; }
+
+  .btn-generate {
+    width: 100%;
+    background: var(--green);
+    color: #000;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    border: none;
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.15s;
+    letter-spacing: 0.3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn-generate:hover:not(:disabled) { background: #1ed760; transform: translateY(-1px); }
+  .btn-generate:active:not(:disabled) { transform: translateY(0); }
+  .btn-generate:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* LOADING */
+  .loader {
+    display: none;
+    text-align: center;
+    padding: 32px 0 8px;
+  }
+
+  .loader-bars {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 4px;
+    height: 40px;
+    margin-bottom: 16px;
+  }
+
+  .bar {
+    width: 4px;
+    background: var(--green);
+    border-radius: 2px;
+    animation: bounce 1.2s ease infinite;
+  }
+
+  .bar:nth-child(2) { animation-delay: 0.1s; }
+  .bar:nth-child(3) { animation-delay: 0.2s; }
+  .bar:nth-child(4) { animation-delay: 0.3s; }
+  .bar:nth-child(5) { animation-delay: 0.4s; }
+
+  .loader-text {
+    color: var(--muted);
+    font-size: 13px;
+    font-style: italic;
+  }
+
+  /* RESULTS */
+  #results { display: none; margin-top: 28px; }
+
+  .results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .results-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .track-count {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .track-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 300px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+    margin-bottom: 20px;
+  }
+
+  .track {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    transition: background 0.15s;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .track:hover { background: var(--surface2); }
+
+  .track-num {
+    font-size: 12px;
+    color: var(--muted);
+    width: 18px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .track-info { flex: 1; min-width: 0; }
+
+  .track-name {
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .track-artist {
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .track-status {
+    font-size: 11px;
+    color: var(--green);
+    flex-shrink: 0;
+  }
+
+  .track-status.not-found { color: var(--muted); }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 20px 0;
+  }
+
+  .action-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    border-radius: 10px;
+    padding: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    letter-spacing: 0.3px;
+  }
+
+  .btn-secondary:hover { border-color: var(--green); background: rgba(29,185,84,0.05); }
+
+  .btn-save {
+    background: var(--green);
+    color: #000;
+    border: none;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    border-radius: 10px;
+    padding: 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .btn-save:hover:not(:disabled) { background: #1ed760; }
+  .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* STATUS */
+  .status-msg {
+    display: none;
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    text-align: center;
+  }
+
+  .status-msg.success {
+    background: rgba(29,185,84,0.1);
+    border: 1px solid rgba(29,185,84,0.3);
+    color: var(--green);
+  }
+
+  .status-msg.error {
+    background: rgba(255,77,77,0.1);
+    border: 1px solid rgba(255,77,77,0.3);
+    color: var(--danger);
+  }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes bounce {
+    0%, 100% { height: 8px; }
+    50% { height: 36px; }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">♪</div>
+    </div>
+    <h1>AI <span>Playlist</span><br/>Generator</h1>
+    <p class="subtitle">Describe a vibe. Get a playlist. Save to Spotify.</p>
+  </div>
+
+  <div class="card">
+
+    <!-- AUTH -->
+    <div id="auth-section">
+      <p class="auth-desc">Connect your Spotify account to get started.<br/>We'll never post or modify anything without your permission.</p>
+      <button class="btn-spotify" onclick="loginSpotify()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+        Connect with Spotify
+      </button>
+    </div>
+
+    <!-- GENERATOR -->
+    <div id="generator-section">
+      <div class="user-badge">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <span class="user-name" id="user-name">Loading...</span>
+        <div class="connected-dot"></div>
+      </div>
+
+      <label for="vibe-input">Describe your vibe</label>
+      <textarea id="vibe-input" placeholder="e.g. late night drive through the city, melancholic but hopeful, indie electronic with some 90s nostalgia…"></textarea>
+
+      <div class="options-row">
+        <div class="option-group">
+          <label for="track-count">Number of songs</label>
+          <select id="track-count">
+            <option value="10">10 songs</option>
+            <option value="15" selected>15 songs</option>
+            <option value="20">20 songs</option>
+            <option value="25">25 songs</option>
+          </select>
+        </div>
+        <div class="option-group">
+          <label for="playlist-name">Playlist name</label>
+          <input type="text" id="playlist-name" placeholder="AI will suggest one…" />
+        </div>
+      </div>
+
+      <button class="btn-generate" id="generate-btn" onclick="generatePlaylist()">
+        <span>✦</span> Generate Playlist
+      </button>
+
+      <div class="loader" id="loader">
+        <div class="loader-bars">
+          <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+          <div class="bar"></div><div class="bar"></div>
+        </div>
+        <p class="loader-text" id="loader-text">AI is curating your playlist…</p>
+      </div>
+
+      <div id="results">
+        <div class="divider"></div>
+        <div class="results-header">
+          <span class="results-title">Your Playlist</span>
+          <span class="track-count" id="track-count-label"></span>
+        </div>
+        <div class="track-list" id="track-list"></div>
+        <div class="action-row">
+          <button class="btn-secondary" onclick="generatePlaylist()">↺ Regenerate</button>
+          <button class="btn-save" id="save-btn" onclick="saveToSpotify()">Save to Spotify</button>
+        </div>
+        <div class="status-msg" id="status-msg"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const CLIENT_ID = '4299c15cbb69410187b0caa83d03fa9a';
+const REDIRECT_URI = 'https://sudovoid254.github.io/playlist-generator/';
+const SCOPES = 'playlist-modify-public playlist-modify-private user-read-private user-read-email';
+
+let accessToken = null;
+let userId = null;
+let generatedTracks = [];
+let suggestedName = '';
+
+// ─── AUTH (PKCE) ─────────────────────────────────────────
+async function generateCodeVerifier() {
+  const array = new Uint8Array(64);
+  crypto.getRandomValues(array);
+  return btoa(String.fromCharCode(...array)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function generateCodeChallenge(verifier) {
+  const data = new TextEncoder().encode(verifier);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function loginSpotify() {
+  const verifier = await generateCodeVerifier();
+  const challenge = await generateCodeChallenge(verifier);
+  sessionStorage.setItem('pkce_verifier', verifier);
+
+  const url = `https://accounts.spotify.com/authorize?response_type=code&client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(SCOPES)}&code_challenge_method=S256&code_challenge=${challenge}`;
+  window.location.href = url;
+}
+
+async function getTokenFromCode(code) {
+  const verifier = sessionStorage.getItem('pkce_verifier');
+  const res = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: REDIRECT_URI,
+      client_id: CLIENT_ID,
+      code_verifier: verifier
+    })
+  });
+  const data = await res.json();
+  return data.access_token;
+}
+
+async function loadUser(token) {
+  const res = await fetch('https://api.spotify.com/v1/me', {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  const data = await res.json();
+  userId = data.id;
+
+  const nameEl = document.getElementById('user-name');
+  const avatarEl = document.getElementById('user-avatar');
+  nameEl.textContent = data.display_name || data.id;
+
+  if (data.images && data.images.length > 0) {
+    avatarEl.innerHTML = `<img src="${data.images[0].url}" alt="avatar"/>`;
+  } else {
+    avatarEl.textContent = (data.display_name || 'U')[0].toUpperCase();
+  }
+
+  document.getElementById('auth-section').style.display = 'none';
+  document.getElementById('generator-section').style.display = 'block';
+}
+
+// ─── GENERATE ────────────────────────────────────────────
+async function generatePlaylist() {
+  const vibe = document.getElementById('vibe-input').value.trim();
+  if (!vibe) { alert('Describe a vibe first!'); return; }
+
+  const count = document.getElementById('track-count').value;
+  const customName = document.getElementById('playlist-name').value.trim();
+
+  setLoading(true);
+  document.getElementById('results').style.display = 'none';
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: `You are a music expert and DJ. Generate a Spotify playlist for this vibe: "${vibe}"
+
+Return ONLY a JSON object (no markdown, no explanation) in this exact format:
+{
+  "name": "Creative playlist name",
+  "tracks": [
+    {"title": "Song Title", "artist": "Artist Name"},
+    ...
+  ]
+}
+
+Generate exactly ${count} tracks. Make them real, well-known songs that actually exist on Spotify. Vary the artists. Match the vibe closely.`
+        }]
+      })
+    });
+
+    const data = await response.json();
+    const raw = data.content.map(b => b.text || '').join('');
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+
+    suggestedName = customName || parsed.name;
+    document.getElementById('playlist-name').value = suggestedName;
+
+    setLoading(false, 'Searching Spotify for tracks…');
+
+    // Search each track on Spotify
+    generatedTracks = [];
+    const trackListEl = document.getElementById('track-list');
+    trackListEl.innerHTML = '';
+
+    document.getElementById('results').style.display = 'block';
+    document.getElementById('track-count-label').textContent = `0 / ${parsed.tracks.length} found`;
+
+    for (let i = 0; i < parsed.tracks.length; i++) {
+      const t = parsed.tracks[i];
+      const uri = await searchTrack(t.title, t.artist);
+
+      const trackEl = document.createElement('div');
+      trackEl.className = 'track';
+      trackEl.style.animationDelay = `${i * 0.04}s`;
+      trackEl.innerHTML = `
+        <span class="track-num">${i + 1}</span>
+        <div class="track-info">
+          <div class="track-name">${t.title}</div>
+          <div class="track-artist">${t.artist}</div>
+        </div>
+        <span class="track-status ${uri ? '' : 'not-found'}">${uri ? '✓' : '—'}</span>
+      `;
+      trackListEl.appendChild(trackEl);
+
+      if (uri) generatedTracks.push(uri);
+      document.getElementById('track-count-label').textContent = `${generatedTracks.length} / ${parsed.tracks.length} found`;
+    }
+
+    setLoading(false);
+    document.getElementById('save-btn').disabled = generatedTracks.length === 0;
+
+  } catch (err) {
+    setLoading(false);
+    showStatus('Something went wrong. Try again!', 'error');
+    console.error(err);
+  }
+}
+
+async function searchTrack(title, artist) {
+  const q = encodeURIComponent(`track:${title} artist:${artist}`);
+  const res = await fetch(`https://api.spotify.com/v1/search?q=${q}&type=track&limit=1`, {
+    headers: { 'Authorization': `Bearer ${accessToken}` }
+  });
+  const data = await res.json();
+  return data.tracks?.items?.[0]?.uri || null;
+}
+
+// ─── SAVE ─────────────────────────────────────────────────
+async function saveToSpotify() {
+  if (!generatedTracks.length) return;
+  document.getElementById('save-btn').disabled = true;
+
+  try {
+    // Create playlist
+    const createRes = await fetch(`https://api.spotify.com/v1/users/${userId}/playlists`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name: suggestedName,
+        description: 'Created with AI Playlist Generator',
+        public: false
+      })
+    });
+    const playlist = await createRes.json();
+
+    // Add tracks
+    await fetch(`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ uris: generatedTracks })
+    });
+
+    showStatus(`🎉 "${suggestedName}" saved to your Spotify!`, 'success');
+  } catch (err) {
+    showStatus('Failed to save. Try again.', 'error');
+    document.getElementById('save-btn').disabled = false;
+  }
+}
+
+// ─── HELPERS ─────────────────────────────────────────────
+function setLoading(on, text = 'AI is curating your playlist…') {
+  document.getElementById('loader').style.display = on ? 'block' : 'none';
+  document.getElementById('loader-text').textContent = text;
+  document.getElementById('generate-btn').disabled = on;
+}
+
+function showStatus(msg, type) {
+  const el = document.getElementById('status-msg');
+  el.textContent = msg;
+  el.className = `status-msg ${type}`;
+  el.style.display = 'block';
+}
+
+// ─── INIT ─────────────────────────────────────────────────
+window.onload = async () => {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  if (code) {
+    history.replaceState({}, '', window.location.pathname);
+    try {
+      const token = await getTokenFromCode(code);
+      if (token) { accessToken = token; loadUser(token); }
+      else { showStatus('Auth failed. Try connecting again.', 'error'); }
+    } catch(e) {
+      showStatus('Auth failed. Try connecting again.', 'error');
+    }
+  }
+};
+</script>
+</body>
+</html>
